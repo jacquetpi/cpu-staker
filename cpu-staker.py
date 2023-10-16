@@ -30,8 +30,8 @@ class StateChanger(object):
         if (not active): content = '0'
         changed_needed = False
         with open(self.path, 'r') as f:
-                if(f.read() == content): changed_needed = True
-
+            if(int(f.read()) != int(content)): changed_needed = True
+        
         if changed_needed:
             self.thread = threading.Thread(target=change_core_state, args=(self.path, content))
             self.thread.start()
@@ -83,13 +83,11 @@ def __get_usage_of_line(split : list, hist_object : object, update_history : boo
     return cpu_usage
 
 def disable_unused(usage : float, cpu_changers : dict):
-    considered_usage = max([math.ceil(usage) + 2, 1])
+    considered_usage = math.ceil(usage) + 1
     for cpu_id, cpu_changer in cpu_changers.items():
-        if cpu_id <= considered_usage:
-            #print(cpu_id, 'considered used')
+        if cpu_id < considered_usage: # cpu_id start at 0 so <
             cpu_changer.set_state(active=True)
         else:
-            #print(cpu_id, 'considered unused')
             cpu_changer.set_state(active=False)
     
     for cpu_changer in cpu_changers.values(): cpu_changer.wait_for_completion()
@@ -125,7 +123,7 @@ if __name__ == '__main__':
             if global_usage != None:
                 global_usage*=cpu_list_len
                 disable_unused(usage=global_usage, cpu_changers=cpu_changers)
-            time.sleep(5)
+            time.sleep(2)
 
     except KeyboardInterrupt:
         print('Program interrupted: Re-enabling all CPU')
