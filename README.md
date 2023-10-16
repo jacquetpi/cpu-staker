@@ -12,3 +12,8 @@ Intended to be use in a VM! No SMT consideration here
 ```bash
 sudo python3 cpu-staker.py --help
 ```
+
+Current state (cpu0 cannot be disabled)
+```bash
+grep '' /sys/devices/system/cpu/cpu*/online
+```
