@@ -19,20 +19,28 @@ class StateChanger(object):
         self.path   = SYSFS_TOPO + 'cpu' + str(cpu_id) + '/online'
         self.thread = None
 
-    def set_state(self, active : bool = True):
-        if self.cpu_id == 0: return # Impossible to disable cpu0
+    def read_state(self):
+        if self.cpu_id == 0: return '1'
+        with open(self.path, 'r') as f:
+            content = f.read()
+        return content
+
+    def read_state_as_int(self):
+        return int(self.read_state())
+
+    def read_state_as_bool(self):
+        return bool(self.read_state())
+
+    def update_state(self, active : bool = True):
+        if self.cpu_id == 0: return # core0 cannot be disabled
 
         def change_core_state(path, content = str):
             with open(path, 'w') as f:
                 f.write(content)
                 
-        content = '1'
-        if (not active): content = '0'
-        changed_needed = False
-        with open(self.path, 'r') as f:
-            if(int(f.read()) != int(content)): changed_needed = True
-        
-        if changed_needed:
+        content = '0'
+        if active: content = '1'
+        if int(content) != self.read_state_as_int(): 
             self.thread = threading.Thread(target=change_core_state, args=(self.path, content))
             self.thread.start()
 
@@ -59,12 +67,12 @@ def get_cpu_list():
     cpu_found = [int(re.sub("[^0-9]", '', f)) for f in listdir(SYSFS_TOPO) if not isfile(join('topology', f)) and re.match(regex, f)]
     return set(cpu_found)
 
-def get_usage_global(cputime_hist : dict):
+def get_usage_global(cpu_time_hist : dict):
     with open(SYSFS_STAT, 'r') as f:
         split = f.readlines()[0].split(' ')
         split.remove('')
-    if 'global' not in cputime_hist: cputime_hist['global'] = CpuTime()
-    return __get_usage_of_line(split=split, hist_object=cputime_hist['global'])
+    if 'global' not in cpu_time_hist: cpu_time_hist['global'] = CpuTime()
+    return __get_usage_of_line(split=split, hist_object=cpu_time_hist['global'])
 
 def __get_usage_of_line(split : list, hist_object : object, update_history : bool = True):
     idle          = sum([ int(split[SYSFS_STATS_KEYS[idle_key]])     for idle_key     in SYSFS_STATS_IDLE])
@@ -82,13 +90,19 @@ def __get_usage_of_line(split : list, hist_object : object, update_history : boo
     if update_history: hist_object.set_time(idle=idle, not_idle=not_idle)
     return cpu_usage
 
-def disable_unused(usage : float, cpu_changers : dict):
-    considered_usage = math.ceil(usage) + 1
+def update_active_cores(last_usage : float, usage_list : list, cpu_changers : dict):
+
+    active_cores_count = 0
+    for cpu_changer in cpu_changers.values(): active_cores_count += cpu_changer.read_state_as_int()
+    margin = 0.2
+    considered_usage = math.ceil(last_usage*active_cores_count + margin)
+
     for cpu_id, cpu_changer in cpu_changers.items():
+
         if cpu_id < considered_usage: # cpu_id start at 0 so <
-            cpu_changer.set_state(active=True)
+            cpu_changer.update_state(active=True)
         else:
-            cpu_changer.set_state(active=False)
+            cpu_changer.update_state(active=False)
     
     for cpu_changer in cpu_changers.values(): cpu_changer.wait_for_completion()
 
@@ -115,18 +129,17 @@ if __name__ == '__main__':
     cpu_list_len = len(cpu_list)
     cpu_changers = {cpu : StateChanger(cpu_id=cpu) for cpu in cpu_list}
     print('Found', cpu_list_len, 'cores :', cpu_list)
-    delta_dict = dict()
 
+    cpu_time_hist = dict()
+    usage_list    = list()
     try:
         while True:
-            global_usage = get_usage_global(cputime_hist=delta_dict)
-            if global_usage != None:
-                global_usage*=cpu_list_len
-                disable_unused(usage=global_usage, cpu_changers=cpu_changers)
-            time.sleep(2)
+            usage = get_usage_global(cpu_time_hist=cpu_time_hist)
+            if usage != None: update_active_cores(last_usage=usage, usage_list=usage_list, cpu_changers=cpu_changers)
+            time.sleep(0.2)
 
     except KeyboardInterrupt:
         print('Program interrupted: Re-enabling all CPU')
-        for cpu_changer in cpu_changers.values(): cpu_changer.set_state(active=True)
+        for cpu_changer in cpu_changers.values(): cpu_changer.update_state(active=True)
         for cpu_changer in cpu_changers.values(): cpu_changer.wait_for_completion()
         sys.exit(0)
