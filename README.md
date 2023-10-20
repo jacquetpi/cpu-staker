@@ -4,7 +4,7 @@ Force workload consolidation of CPU (fully use core0 before using core1, and so 
 
 ## Features
 
-Use disabling facilities of linux
+Use disabling facilities of linux  
 Intended to be use in a VM! No SMT consideration here
 
 ## Usage
