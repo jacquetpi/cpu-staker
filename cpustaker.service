@@ -1,0 +1,10 @@
+[Unit]
+Description=CPU Staker service
+
+[Service]
+User=root
+Type=simple
+ExecStart=/bin/bash -c 'python3 /usr/local/src/cpu-staker/cpu-staker.py'
+
+[Install]
+WantedBy=multi-user.target
