@@ -22,7 +22,7 @@ grep '' /sys/devices/system/cpu/cpu*/online
 
 Once cpustaker.service was adapted according to your needs
 ```bash
-cp cpustaker.service /etc/systemd/system/
+sudo cp cpustaker.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable cpustaker
 sudo systemctl start cpustaker
