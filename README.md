@@ -1,10 +1,11 @@
 # CPU staker
 
-Force workload consolidation of CPU (fully use core0 before using core1, and so on)
+Force the current workload of the OS to be consolidated on the smallest count of CPUs possible (instead of being spread).
+We fully use CPU0 before using CPU1 and so on.
 
 ## Features
 
-Use disabling facilities of linux  
+Use core disabling facilities of linux  
 Intended to be use in a VM! No SMT consideration here
 
 ## Usage
@@ -20,7 +21,7 @@ grep '' /sys/devices/system/cpu/cpu*/online
 
 ## Set up as daemon
 
-Once cpustaker.service was adapted according to your needs
+Once cpustaker.service was adapted according to your needs:
 ```bash
 sudo cp cpustaker.service /etc/systemd/system/
 sudo systemctl daemon-reload
