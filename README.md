@@ -1,7 +1,7 @@
 # CPU staker
 
 Force the current workload of the OS to be consolidated on the smallest count of CPUs possible (instead of being spread).
-We fully use CPU0 before using CPU1 and so on.
+> We fully use CPU0 before using CPU1, CPU1 before CPU2, and so on
 
 ## Features
 
